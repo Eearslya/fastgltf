@@ -141,20 +141,16 @@ namespace fastgltf {
     }
 
     constexpr ComponentType getComponentType(std::underlying_type_t<ComponentType> componentType) noexcept {
-        constexpr std::array<ComponentType, 7> components = {
-            ComponentType::Byte,
-            ComponentType::UnsignedByte,
-            ComponentType::Short,
-            ComponentType::UnsignedShort,
-            ComponentType::UnsignedInt,
-            ComponentType::Float,
-            ComponentType::Double
-        };
+        constexpr std::array<ComponentType, 7> components = {ComponentType::Byte,
+                                                             ComponentType::UnsignedByte,
+                                                             ComponentType::Short,
+                                                             ComponentType::UnsignedShort,
+                                                             ComponentType::UnsignedInt,
+                                                             ComponentType::Float,
+                                                             ComponentType::Double};
         // This shouldn't bee too slow if called multiple times when parsing...
         for (auto component : components) {
-            if ((to_underlying(component) & 0xFFFF) == componentType) {
-                return component;
-            }
+            if ((to_underlying(component) & 0xFFFF) == componentType) { return component; }
         }
         return ComponentType::Invalid;
     }
@@ -172,9 +168,7 @@ namespace fastgltf {
             },
         };
         for (auto [key, value] : accessorPairs) {
-            if (key == accessorTypeName) {
-                return value;
-            }
+            if (key == accessorTypeName) { return value; }
         }
         return AccessorType::Invalid;
     }
@@ -430,9 +424,9 @@ namespace fastgltf {
         std::vector<Skin> skins;
         std::vector<Texture> textures;
 
-        explicit Asset() = default;
-        explicit Asset(const Asset& scene) = delete;
+        explicit Asset()                     = default;
+        explicit Asset(const Asset& scene)   = delete;
         Asset& operator=(const Asset& scene) = delete;
     };
 #pragma endregion
-}
+}  // namespace fastgltf

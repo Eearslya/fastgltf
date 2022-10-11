@@ -3,7 +3,7 @@
 #include <type_traits>
 
 namespace fastgltf {
-    template<typename T>
+    template <typename T>
     constexpr std::underlying_type_t<T> to_underlying(T t) noexcept {
         static_assert(std::is_enum_v<T>, "to_underlying only works with enum types.");
         return static_cast<std::underlying_type_t<T>>(t);
@@ -24,4 +24,4 @@ namespace fastgltf {
     constexpr T alignDown(T base, T alignment) {
         return base - (base % alignment);
     }
-}
+}  // namespace fastgltf

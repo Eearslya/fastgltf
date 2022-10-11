@@ -13,4 +13,4 @@ namespace fastgltf::base64 {
 #endif
     [[nodiscard]] std::vector<uint8_t> fallback_decode(std::string_view encoded);
     [[nodiscard]] std::vector<uint8_t> decode(std::string_view encoded);
-}
+}  // namespace fastgltf::base64

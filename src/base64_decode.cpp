@@ -2,38 +2,36 @@
 #include <cmath>
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_IX86)
-#include <immintrin.h>
-#if defined(__clang__) || defined(__GNUC__)
-#include <avxintrin.h>
-#include <avx2intrin.h>
-#endif
+#    include <immintrin.h>
+#    if defined(__clang__) || defined(__GNUC__)
+#        include <avx2intrin.h>
+#        include <avxintrin.h>
+#    endif
 #elif defined(__aarch64__)
-#include <arm_neon.h>
+#    include <arm_neon.h>
 #endif
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 5030)
+#    pragma warning(push)
+#    pragma warning(disable : 5030)
 #endif
 
-#include "simdjson.h"
-
 #include "base64_decode.hpp"
+#include "simdjson.h"
 
 namespace fg = fastgltf;
 
 namespace fastgltf::base64 {
     [[gnu::always_inline]] inline size_t getPadding(std::string_view string) {
         size_t padding = 0;
-        auto size = string.size();
+        auto size      = string.size();
         for (auto i = size - 1; i >= (size - 3); --i) {
-            if (string[i] != '=')
-                break;
+            if (string[i] != '=') break;
             ++padding;
         }
         return padding;
     }
-}
+}  // namespace fastgltf::base64
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_IX86)
 // The AVX and SSE decoding functions are based on http://0x80.pl/notesen/2016-01-17-sse-base64-decoding.html.
@@ -43,16 +41,18 @@ namespace fastgltf::base64 {
 [[gnu::target("avx2"), gnu::always_inline]] inline auto lookup_pshufb_bitmask(const __m256i input) {
     const auto higher_nibble = _mm256_and_si256(_mm256_srli_epi32(input, 4), _mm256_set1_epi8(0x0f));
 
+    // clang-format off
     const auto shiftLUT = _mm256_setr_epi8(
         0,   0,  19,   4, -65, -65, -71, -71,
         0,   0,   0,   0,   0,   0,   0,   0,
 
         0,   0,  19,   4, -65, -65, -71, -71,
         0,   0,   0,   0,   0,   0,   0,   0);
+    // clang-format on
 
-    const auto sh     = _mm256_shuffle_epi8(shiftLUT,  higher_nibble);
-    const auto eq_2f  = _mm256_cmpeq_epi8(input, _mm256_set1_epi8(0x2f));
-    const auto shift  = _mm256_blendv_epi8(sh, _mm256_set1_epi8(16), eq_2f);
+    const auto sh    = _mm256_shuffle_epi8(shiftLUT, higher_nibble);
+    const auto eq_2f = _mm256_cmpeq_epi8(input, _mm256_set1_epi8(0x2f));
+    const auto shift = _mm256_blendv_epi8(sh, _mm256_set1_epi8(16), eq_2f);
 
     return _mm256_add_epi8(input, shift);
 }
@@ -70,16 +70,17 @@ namespace fastgltf::base64 {
     // remaining data.
     auto encodedSize = encoded.size();
     auto alignedSize = encodedSize - (encodedSize % dataSetSize);
-    auto padding = getPadding(encoded);
+    auto padding     = getPadding(encoded);
 
     std::vector<uint8_t> ret(alignedSize);
     auto* out = ret.data();
 
     for (size_t pos = 0; pos < alignedSize; pos += dataSetSize) {
-        auto in = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&encoded[pos]));
-        auto values = lookup_pshufb_bitmask(in);
+        auto in           = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&encoded[pos]));
+        auto values       = lookup_pshufb_bitmask(in);
         const auto merged = pack_ints(values);
 
+        // clang-format off
         const auto shuffle = _mm256_setr_epi8(
             2,  1,  0,
             6,  5,  4,
@@ -91,6 +92,7 @@ namespace fastgltf::base64 {
             10,  9,  8,
             14, 13, 12,
             char(0xff), char(0xff), char(0xff), char(0xff));
+        // clang-format on
 
         const auto shuffled = _mm256_shuffle_epi8(merged, shuffle);
 
@@ -107,8 +109,7 @@ namespace fastgltf::base64 {
     if (alignedSize < encodedSize) {
         // Decode the last chunk traditionally
         auto remainder = fallback_decode(encoded.substr(alignedSize, encodedSize));
-        for (size_t i = 0; i < remainder.size(); ++i)
-            ret[ret.size() - remainder.size() + i] = remainder[i];
+        for (size_t i = 0; i < remainder.size(); ++i) ret[ret.size() - remainder.size() + i] = remainder[i];
     }
 
     return ret;
@@ -117,13 +118,11 @@ namespace fastgltf::base64 {
 [[gnu::target("sse4.1"), gnu::always_inline]] inline auto sse4_lookup_pshufb_bitmask(const __m128i input) {
     const auto higher_nibble = _mm_and_si128(_mm_srli_epi32(input, 4), _mm_set1_epi8(0x0f));
 
-    const auto shiftLUT = _mm_setr_epi8(
-        0,   0,  19,   4, -65, -65, -71, -71,
-        0,   0,   0,   0,   0,   0,   0,   0);
+    const auto shiftLUT = _mm_setr_epi8(0, 0, 19, 4, -65, -65, -71, -71, 0, 0, 0, 0, 0, 0, 0, 0);
 
-    const auto sh     = _mm_shuffle_epi8(shiftLUT,  higher_nibble);
-    const auto eq_2f  = _mm_cmpeq_epi8(input, _mm_set1_epi8(0x2f));
-    const auto shift  = _mm_blendv_epi8(sh, _mm_set1_epi8(16), eq_2f);
+    const auto sh    = _mm_shuffle_epi8(shiftLUT, higher_nibble);
+    const auto eq_2f = _mm_cmpeq_epi8(input, _mm_set1_epi8(0x2f));
+    const auto shift = _mm_blendv_epi8(sh, _mm_set1_epi8(16), eq_2f);
 
     return _mm_add_epi8(input, shift);
 }
@@ -141,22 +140,24 @@ namespace fastgltf::base64 {
     // remaining data.
     auto encodedSize = encoded.size();
     auto alignedSize = encodedSize - (encodedSize % dataSetSize);
-    auto padding = getPadding(encoded);
+    auto padding     = getPadding(encoded);
 
     std::vector<uint8_t> ret(alignedSize);
     auto* out = ret.data();
 
     for (size_t pos = 0; pos < alignedSize; pos += dataSetSize) {
-        auto in = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&encoded[pos]));
-        auto values = sse4_lookup_pshufb_bitmask(in);
+        auto in           = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&encoded[pos]));
+        auto values       = sse4_lookup_pshufb_bitmask(in);
         const auto merged = sse4_pack_ints(values);
 
+        // clang-format off
         const auto shuf = _mm_setr_epi8(
             2,  1,  0,
             6,  5,  4,
             10,  9,  8,
             14, 13, 12,
             char(0xff), char(0xff), char(0xff), char(0xff));
+        // clang-format on
 
         const auto shuffled = _mm_shuffle_epi8(merged, shuf);
 
@@ -172,8 +173,7 @@ namespace fastgltf::base64 {
     if (alignedSize < encodedSize) {
         // Decode the last chunk traditionally
         auto remainder = fallback_decode(encoded.substr(alignedSize, encodedSize));
-        for (size_t i = 0; i < remainder.size(); ++i)
-            ret[ret.size() - remainder.size() + i] = remainder[i];
+        for (size_t i = 0; i < remainder.size(); ++i) ret[ret.size() - remainder.size() + i] = remainder[i];
     }
 
     return ret;
@@ -277,8 +277,8 @@ constexpr std::array<uint8_t, 128> base64lut = {
 // clang-format on
 
 std::vector<uint8_t> fg::base64::fallback_decode(std::string_view encoded) {
-    auto encodedSize = encoded.size();
-    std::array<uint8_t, 4> sixBitChars = {};
+    auto encodedSize                     = encoded.size();
+    std::array<uint8_t, 4> sixBitChars   = {};
     std::array<uint8_t, 3> eightBitChars = {};
     std::vector<uint8_t> ret;
     auto padding = getPadding(encoded);
@@ -288,13 +288,11 @@ std::vector<uint8_t> fg::base64::fallback_decode(std::string_view encoded) {
     // We use i here to track how many we've parsed and to batch 4 chars together.
     size_t i = 0U;
     for (auto pos = 0U; pos < encodedSize;) {
-        sixBitChars[i++] = encoded[pos]; ++pos;
-        if (i != 4)
-            continue;
+        sixBitChars[i++] = encoded[pos];
+        ++pos;
+        if (i != 4) continue;
 
-        for (i = 0; i < 4; i++) {
-            sixBitChars[i] = base64lut[sixBitChars[i]];
-        }
+        for (i = 0; i < 4; i++) { sixBitChars[i] = base64lut[sixBitChars[i]]; }
 
         eightBitChars[0] = (sixBitChars[0] << 2) + ((sixBitChars[1] & 0x30) >> 4);
         eightBitChars[1] = ((sixBitChars[1] & 0xf) << 4) + ((sixBitChars[2] & 0x3c) >> 2);
@@ -326,14 +324,12 @@ std::vector<uint8_t> fg::base64::decode(std::string_view encoded) {
 
 #if defined(__aarch64__)
     auto* neon = simdjson::get_available_implementations()["arm64"];
-    if (neon != nullptr && neon->supported_by_runtime_system()) {
-        return neon_decode(encoded);
-    }
+    if (neon != nullptr && neon->supported_by_runtime_system()) { return neon_decode(encoded); }
 #endif
 
     return fallback_decode(encoded);
 }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif

@@ -9,9 +9,9 @@
 #include "fastgltf_util.hpp"
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 5030) // attribute 'x' is not recognized
-#pragma warning(disable : 4514) // unreferenced inline function has been removed
+#    pragma warning(push)
+#    pragma warning(disable : 5030)  // attribute 'x' is not recognized
+#    pragma warning(disable : 4514)  // unreferenced inline function has been removed
 #endif
 
 // fwd
@@ -20,7 +20,7 @@ namespace simdjson {
     namespace dom {
         class parser;
     }
-}
+}  // namespace simdjson
 
 namespace fastgltf {
     struct Asset;
@@ -32,15 +32,15 @@ namespace fastgltf {
     enum class MimeType : uint16_t;
 
     enum class Error : uint64_t {
-        None = 0,
-        InvalidPath = 1,
-        MissingExtensions = 2,
-        UnsupportedExtensions = 3,
-        InvalidJson = 4,
-        InvalidGltf = 5,
+        None                       = 0,
+        InvalidPath                = 1,
+        MissingExtensions          = 2,
+        UnsupportedExtensions      = 3,
+        InvalidJson                = 4,
+        InvalidGltf                = 5,
         InvalidOrMissingAssetField = 6,
-        InvalidGLB = 6,
-        MissingField = 7,
+        InvalidGLB                 = 6,
+        MissingField               = 7,
     };
 
     // clang-format off
@@ -112,9 +112,21 @@ namespace fastgltf {
         Extensions extensions;
         Error errorCode = Error::None;
 
-        explicit glTF(std::unique_ptr<ParserData> data, std::filesystem::path directory, Options options, Extensions extension);
-        explicit glTF(std::unique_ptr<ParserData> data, std::filesystem::path file, std::vector<uint8_t>&& glbData, Options options, Extensions extension);
-        explicit glTF(std::unique_ptr<ParserData> data, std::filesystem::path file, size_t fileOffset, size_t fileSize, Options options, Extensions extension);
+        explicit glTF(std::unique_ptr<ParserData> data,
+                      std::filesystem::path directory,
+                      Options options,
+                      Extensions extension);
+        explicit glTF(std::unique_ptr<ParserData> data,
+                      std::filesystem::path file,
+                      std::vector<uint8_t>&& glbData,
+                      Options options,
+                      Extensions extension);
+        explicit glTF(std::unique_ptr<ParserData> data,
+                      std::filesystem::path file,
+                      size_t fileOffset,
+                      size_t fileSize,
+                      Options options,
+                      Extensions extension);
 
         static auto getMimeTypeFromString(std::string_view mime) -> MimeType;
 
@@ -122,10 +134,12 @@ namespace fastgltf {
         [[nodiscard]] bool checkExtensions();
         [[nodiscard]] auto decodeUri(std::string_view uri) const -> std::tuple<Error, DataSource, DataLocation>;
         [[nodiscard, gnu::always_inline]] inline Error returnError(Error error) noexcept;
-        [[gnu::always_inline]] inline Error parseTextureObject(void* object, std::string_view key, TextureInfo* info) noexcept;
+        [[gnu::always_inline]] inline Error parseTextureObject(void* object,
+                                                               std::string_view key,
+                                                               TextureInfo* info) noexcept;
 
     public:
-        explicit glTF(const glTF& scene) = delete;
+        explicit glTF(const glTF& scene)   = delete;
         glTF& operator=(const glTF& scene) = delete;
 
         ~glTF();
@@ -185,7 +199,7 @@ namespace fastgltf {
 
     public:
         explicit Parser(Extensions extensionsToLoad = Extensions::None) noexcept;
-        explicit Parser(const Parser& scene) = delete;
+        explicit Parser(const Parser& scene)   = delete;
         Parser& operator=(const Parser& scene) = delete;
 
         ~Parser();
@@ -199,16 +213,21 @@ namespace fastgltf {
          * Loads a glTF file from pre-loaded bytes representing a JSON file.
          * @return A glTF instance or nullptr if an error occurred.
          */
-        [[nodiscard]] std::unique_ptr<glTF> loadGLTF(JsonData* jsonData, std::filesystem::path directory, Options options = Options::None);
+        [[nodiscard]] std::unique_ptr<glTF> loadGLTF(JsonData* jsonData,
+                                                     std::filesystem::path directory,
+                                                     Options options = Options::None);
 
-        [[nodiscard]] std::unique_ptr<glTF> loadGLTF(JsonData* jsonData, std::string_view directory, Options options = Options::None);
+        [[nodiscard]] std::unique_ptr<glTF> loadGLTF(JsonData* jsonData,
+                                                     std::string_view directory,
+                                                     Options options = Options::None);
 
-        [[nodiscard]] std::unique_ptr<glTF> loadBinaryGLTF(const std::filesystem::path& file, Options options = Options::None);
+        [[nodiscard]] std::unique_ptr<glTF> loadBinaryGLTF(const std::filesystem::path& file,
+                                                           Options options = Options::None);
 
         [[nodiscard]] std::unique_ptr<glTF> loadBinaryGLTF(std::string_view file, Options options = Options::None);
     };
-}
+}  // namespace fastgltf
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#    pragma warning(pop)
 #endif
